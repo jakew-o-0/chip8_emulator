@@ -1,4 +1,6 @@
 #include<fstream>
+#include <iostream>
+#include <ostream>
 #include<vector>
 #include<string>
 
@@ -41,6 +43,9 @@ u_char chip8_fontset[80] =
 };
 
 
+//////////////////////////////////////////////////////////////////////////
+
+
 void initialise(){
     PC = 0x200;
     SP = 0;
@@ -73,7 +78,7 @@ void initialise(){
 
 void load_game(std::string game_path){
     std::ifstream file;
-    file.open(game_path, std::ios::binary);
+    file.open(game_path, std::ios::binary | std::ios::in);
 
     // reads game rom and writes it to RAM
     if(file.is_open()){
@@ -89,10 +94,17 @@ void load_game(std::string game_path){
 
         // input file contents to buffer
         file.read(buffer.data(), size);
+	    file.close();
 
         // write the buffer into the program portion of RAM
         for(int i = 0; i < size; i++){
             RAM[i + 512] = buffer[i];
+	    std::cout << "\n" << RAM[i + 512];
         }
+
+
+	// couldnt open file
+    }else{
+	std::cout << "couldnt open file\n";
     }
 }
