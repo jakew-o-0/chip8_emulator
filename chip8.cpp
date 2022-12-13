@@ -6,6 +6,7 @@
 
 class Chip8_CPU
 {
+private:
     unsigned char RAM[4096];       // 4KB memory
     unsigned char REG[16];         // general purpose registers 0-F, F is used as a carry flag
     uint16_t STACK[16];     // calling and returning from subroutines
@@ -24,7 +25,7 @@ class Chip8_CPU
         - 0x200 -> 0xFFF    program memory and work ram
     ================================*/
 
-    
+public:
     void initialise();
     void load_game(std::string path);
     void fetch();
@@ -222,18 +223,22 @@ void Chip8_CPU::decode() {
             // assigns regX to value of regY
             case 0x00:
                 REG[regX] = REG[regY];
+                break;
 
             // assigns regx to value of regy OR regx
             case 0x01:
                 REG[regX] |= REG[regY];
+                break;
 
             // assigns regx to value of regy AND regx
             case 0x02:
                 REG[regX] &= REG[regY];
+                break;
 
             // assigns regx to value of regy XOR regx
             case 0x03:
                 REG[regX] ^= REG[regY];
+                break;
 
             // adds regY to regX with carry flag
             case 0x04:
@@ -261,6 +266,32 @@ void Chip8_CPU::decode() {
                 }
                 break;
 
+            // stores the smallest bit in register F
+            // then shifts regx right 1
+            case 0x06:
+                REG[0xF] = (REG[regX] & 1);
+                REG[regX] >>= 1;
+                break;
+
+            // sets register x to register y - x
+            // with borrow flag
+            case 0x07:
+                unsigned char prev_regX = REG[regX];
+                REG[regX] = REG[regY] - REG[regX];
+                REG[0xF] = 1;
+
+                if (prev_regX < REG[regX]) {
+                    REG[0xF] = 0;
+                }
+                break;
+
+            // stores the largest bit in register F
+            // then shifts regx left 1
+            case 0x0E:
+                REG[0xF] = (REG[regX] & (1 << 8));
+                REG[regX] <<= 1;
+                break;
+
             default:
                 break;
             }
@@ -281,10 +312,57 @@ void Chip8_CPU::decode() {
             I = opcode & 0x0FFF;
             break;
 
+        // 0xBNNN jumps to location NNN plus register 0
+        case 0xB000:
+            PC = REG[0] + (opcode & 0x0FFF);
+            break;
+
+        // 0xCXNN assigns register x to a 
+        // random number AND a one byte value given
+        case 0xC000:
+            REG[regX] = (std::rand() % 255) & cond_value;
+            break;
 
         case 0xD000:
             //draw to screen
             // TODO sort out GUI
+            break;
+
+        case 0xE000:
+            // user input checking
+            break;
+            
+        case 0xF000:
+            unsigned char op_subType = (opcode & 0x00FF) & 0xFF;
+            switch (op_subType)
+            {
+            // 0xFX07 assigns register x to the value of the delay timer
+            case 0x07:
+                REG[regX] = DELAY_TIMER;
+
+            case 0x0A:
+                //waits for key input
+                
+            case 0x15:
+                DELAY_TIMER = REG[regX];
+
+            case 0x18:
+                SOUND_TIMER = REG[regX];
+                break;
+
+            case 0x1E:
+                I += REG[regX];
+                break;
+
+            case 0x29:
+                //something silly
+
+            case 0x33:
+                RAM[I] = 
+            default:
+                break;
+            }
+            break;
 
         default:
             break;
