@@ -137,20 +137,28 @@ void Chip8_CPU::decode() {
             PC = opcode & 0x0FFF;   // pc set to the given address
             break;
 
-        case 0x2000:
-            call_subroutine();
+        case 0x2000:                // 0x2NNN calls subroutine at location NNN
+            STACK[SP] = PC;         // add pc to stack and incement sp
+            SP++;
+            PC = opcode & 0x0FFF;   // jump to location NNN by assigning pc NNN
             break;
 
-        case 0x3000:
-            VX_equal_NN();
+        case 0x3000:    // 0x3XNN checks if the one byte value NN equals the value in register X
+            if (REG[regX] == cond_value) {  // if true, the next instruction is skipped
+                PC += 2;
+            }
             break;
 
-        case 0x4000:
-            VX_notEqual_NN();
+        case 0x4000:    // 0x4XNN does the same as 0x3XNN but the condition is if X is not equal to NN
+            if (REG[regX] != cond_value) {
+                PC += 2;
+            }
             break;
 
-        case 0x5000:
-            VX_equal_VY();
+        case 0x5000:    // 0x5XY0 compares values of registers X and Y
+            if (REG[regX] == REG[regY]) {   // if they are equal then the next instruction is skipped
+                PC += 2;
+            }
             break;
 
         case 0x6000:    // 0x6XNN sets the value of register X to NN
@@ -165,8 +173,10 @@ void Chip8_CPU::decode() {
             math_logic_group();
             break;
 
-        case 0x9000:
-            VX_notEqual_VY();
+        case 0x9000:    // 0x9XY0 compares values of registers X and Y
+            if (REG[regX] != REG[regY]) {   // if they are not equal then the next instruction is skipped
+                PC += 2;
+            }
             break;
 
         case 0xA000:    // 0xANNN asigns the index register to the given address
@@ -215,56 +225,6 @@ void Chip8_CPU::zero_group(){
         SP--;
         PC = STACK[SP];
         STACK[SP] = 0x0000;
-    }
-}
-
-
-///////////////////////////////////////////////////////////
-
-
-// 0x2NNN calls subroutine at location NNN
-// add pc to stack and incement sp
-// jump to location NNN by assigning pc NNN
-void Chip8_CPU::call_subroutine(){
-    STACK[SP] = PC;
-    SP++;
-    PC = opcode & 0x0FFF;
-}
-
-
-///////////////////////////////////////////////////////////
-
-
-// 0x3XNN checks if the one byte value NN
-// equals the value in register X
-// if true, the next instruction is skipped
-void Chip8_CPU::VX_equal_NN(){
-    if (REG[regX] == cond_value) {
-        PC += 2;
-    }
-}
-
-
-////////////////////////////////////////////////////////////
-
-
-// 0x4XNN does the same as 0x3XNN but
-// the condition is if X is not equal to NN
-void Chip8_CPU::VX_notEqual_NN(){
-    if (REG[regX] != cond_value) {
-        PC += 2;
-    }
-}
-
-
-///////////////////////////////////////////////////////////
-
-
-// 0x5XY0 compares values of registers X and Y
-// if they are equal then the next instruction is skipped
-void Chip8_CPU::VX_equal_VY(){
-    if (REG[regX] == REG[regY]) {
-        PC += 2;
     }
 }
 
@@ -354,17 +314,6 @@ void Chip8_CPU::math_logic_group(){
 
         default:
             break;
-    }
-}
-
-
-////////////////////////////////////////////////////////////////
-
-// 0x9XY0 compares values of registers X and Y
-// if they are not equal then the next instruction is skipped
-void Chip8_CPU::VX_notEqual_VY(){
-    if (REG[regX] != REG[regY]) {
-        PC += 2;
     }
 }
 
