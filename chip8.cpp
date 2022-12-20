@@ -4,7 +4,7 @@
 #include<vector>
 #include<string>
 
-#include<chip8.h>
+#include "chip8.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -128,14 +128,29 @@ void Chip8_CPU::decode() {
     cond_value = (opcode & 0x00FF) & 0xFF;          // isolates the two least significant nibbles, often used as a condition or a value
 
     switch (op_type){
-
         case 0x0000:
-            zero_group();
+	    
+            if((opcode & 0x00f0) == 0x00E0){	// 0x00E0 clears screen
+                for(int i =0; i<=32*64; i++){
+                    SCREEN[i] = 0x00;
+                }
+            }
+
+            else if((opcode & 0x00FF) == 0x00EE){	//0X00EE returns from subroutine
+                SP--;					//decrement stack pointer
+                PC = STACK[SP];				//pc asigned to the retrun location
+                STACK[SP] = 0x0000;			//unused stack position is cleared
+            }
             break;
+
+
 
         case 0x1000:                // 0x1NNN jumps to the address given 
             PC = opcode & 0x0FFF;   // pc set to the given address
             break;
+
+
+
 
         case 0x2000:                // 0x2NNN calls subroutine at location NNN
             STACK[SP] = PC;         // add pc to stack and incement sp
@@ -143,11 +158,17 @@ void Chip8_CPU::decode() {
             PC = opcode & 0x0FFF;   // jump to location NNN by assigning pc NNN
             break;
 
+
+
+
         case 0x3000:    // 0x3XNN checks if the one byte value NN equals the value in register X
             if (REG[regX] == cond_value) {  // if true, the next instruction is skipped
                 PC += 2;
             }
             break;
+
+
+
 
         case 0x4000:    // 0x4XNN does the same as 0x3XNN but the condition is if X is not equal to NN
             if (REG[regX] != cond_value) {
@@ -155,23 +176,38 @@ void Chip8_CPU::decode() {
             }
             break;
 
+
+
+
         case 0x5000:    // 0x5XY0 compares values of registers X and Y
             if (REG[regX] == REG[regY]) {   // if they are equal then the next instruction is skipped
                 PC += 2;
             }
             break;
 
+
+
+
         case 0x6000:    // 0x6XNN sets the value of register X to NN
             REG[regX] = cond_value;     
             break;
+
+
+
 
         case 0x7000:    // 0x7XNN adds byte NN to register VX, without carry flag
             REG[regX] += cond_value;
             break;
 
+
+
+
         case 0x8000:
             math_logic_group();
             break;
+
+
+
 
         case 0x9000:    // 0x9XY0 compares values of registers X and Y
             if (REG[regX] != REG[regY]) {   // if they are not equal then the next instruction is skipped
@@ -179,29 +215,50 @@ void Chip8_CPU::decode() {
             }
             break;
 
+
+
+
         case 0xA000:    // 0xANNN asigns the index register to the given address
             I = opcode & 0x0FFF;
             break;
+
+
+
 
         case 0xB000:    // 0xBNNN jumps to location NNN plus register 0
             PC = REG[0] + (opcode & 0x0FFF);
             break;
 
+
+
+
         case 0xC000:   // 0xCXNN assigns register x to a random number AND a one byte value given 
             REG[regX] = (std::rand() % 255) & cond_value;
             break;
 
+
+
+
         case 0xD000:
-            draw_to_screen();
+            //draw_to_screen();
             break;
+
+
+
 
         case 0xE000:
             // user input checking
             break;
+
+
+
             
         case 0xF000:
             F_group();
             break;
+
+
+
 
         default:
             break;
@@ -214,22 +271,6 @@ void Chip8_CPU::decode() {
 ///////////////////////////////////////////////////////////
 //=================instruction decoding=================///
 //////////////////////////////////////////////////////////
-
-
-void Chip8_CPU::zero_group(){
-    // 0x00E0 clears screen
-    if((opcode & 0x00FF) == 0x00E0){/*CLEAR SCREEN*/}
-
-    //0X00EE returns from subroutine
-    else if((opcode & 0x00FF) == 0x00EE){
-        SP--;
-        PC = STACK[SP];
-        STACK[SP] = 0x0000;
-    }
-}
-
-
-/////////////////////////////////////////////////////////
 
 
 void Chip8_CPU::math_logic_group(){
@@ -335,8 +376,8 @@ void Chip8_CPU::F_group(){
 
     switch (op_subType){
 
-    // 0xFX07 assigns register x to the value of the delay timer
-        case 0x07:
+    
+        case 0x07:  // 0xFX07 assigns register x to the value of the delay timer
             REG[regX] = DELAY_TIMER;
             break;
 

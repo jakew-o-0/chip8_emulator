@@ -1,3 +1,6 @@
+#ifndef _CHIP8_
+#define _CHIP8_
+
 #include<fstream>
 #include<iostream>
 #include<sys/types.h>
@@ -38,14 +41,9 @@ public:
     void decode();
 
 private:
-    void zero_group();
-    void call_subroutine();
-    void VX_equal_NN();
-    void VX_notEqual_NN();
-    void VX_equal_VY();
     void math_logic_group();
-    void VX_notEqual_VY();
     void draw_to_screen();
     void E_group();
     void F_group();
 };
+#endif
