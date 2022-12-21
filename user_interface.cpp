@@ -1,5 +1,8 @@
+#include <curses.h>
 #include <locale>
 #include <ncurses.h>
+#include <string>
+#include <vector>
 
 #include "user_interface.h"
 
@@ -80,3 +83,25 @@ char usr_interface::get_input(){
     }else{return 0xFF;}
 }
 //////////////////////////////////////////////////////////
+
+
+void usr_interface::draw_screen(unsigned char x_pos, unsigned char y_pos,std::vector<std::string> sprite, unsigned char screen_cond){
+    
+    if(screen_cond == 0x02){
+        werase(win);
+    }
+    else if(screen_cond == 0x01){
+
+        for(int i = 0; i < sprite.size(); i++){
+            for(int j = 0; j < 8; i++){
+                if(((j * 2) + x_pos) >= 130){
+                    break;
+                }
+                if(sprite[i].substr(j) == "1"){
+                    char* pixel = "██";
+                    mvwprintw(win, y_pos + i, x_pos + (j *2), pixel);
+                }
+            }
+        }
+    }
+}

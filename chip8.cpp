@@ -39,26 +39,24 @@ void Chip8_CPU::initialise(){   // empties memory and loads the fontset into ram
       0xF0, 0x80, 0xF0, 0x80, 0x80  // F
     };
 
-    // clear memory
-    for(int i = 0x200; i <= 0xFFF; i++){
+    
+    for(int i = 0x200; i <= 0xFFF; i++){    // clear memory
         RAM[i] = 0x00;
     }
 
-    // load fontset
-    for(int i = 0x050; i <= 0x0A0; i++){
+    
+    for(int i = 0x050; i <= 0x0A0; i++){    // load fontset
         RAM[i] = chip8_fontset[i - 0x050]; 
     }
 
-    // clear stack and registers
-    for(int i = 0; i < 16; i++){
+    
+    for(int i = 0; i < 16; i++){    // clear stack and registers
         REG[i] = 0;
         STACK[i] = 0;
     }
 
-    // clear the screen
-    for(int i = 0; i < 64*32; i++){
-        SCREEN[i] = 0;
-    }
+    
+    screen_cond = 0x02;
 }
 
 
@@ -69,29 +67,29 @@ void Chip8_CPU::load_game(std::string path){    // reads binary file, loads it i
     std::ifstream file;
     file.open(path, std::ios::binary | std::ios::in);
 
-    //cant open file
-    if (~(file.is_open())) {
+    
+    if (~(file.is_open())) {    //cant open file
 
         std::cout << "couldnt open file\n";
 
     }
 
     // reads game rom and writes it to RAM
-    // find the size of rom file
-    file.seekg(0, std::ios::end);
+    
+    file.seekg(1, std::ios::end);   // find the size of rom file
     int size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    // create a buffer for file input
-    std::vector<char> buffer;
+    
+    std::vector<char> buffer;   // create a buffer for file input
     buffer.resize(size);
 
-    // input file contents to buffer
-    file.read(buffer.data(), size);
+    
+    file.read(buffer.data(), size); // input file contents to buffer
     file.close();
 
-    // write the buffer into the program portion of RAM
-    for (int i = 0; i < size; i++) {
+    
+    for (int i = 0; i < size; i++) {    // write the buffer into the program portion of RAM
         RAM[i + 512] = buffer[i];
         std::cout << "\n" << RAM[i + 512];
     }
@@ -126,14 +124,15 @@ void Chip8_CPU::decode() {
     regX = ((opcode & 0x0F00) >> (2 * 8)) & 0xFF;   // isolates third nibble, often used to point to a register
     regY = ((opcode & 0x00F0) >> 8) & 0xFF;         // isolates second nibble, often used to point to a register 
     cond_value = (opcode & 0x00FF) & 0xFF;          // isolates the two least significant nibbles, often used as a condition or a value
+    op_subType = (opcode & 0x000F) & 0xFF;    // last nibble
+
+    screen_cond = 0x00;
 
     switch (op_type){
         case 0x0000:
 	    
             if((opcode & 0x00f0) == 0x00E0){	// 0x00E0 clears screen
-                for(int i =0; i<=32*64; i++){
-                    SCREEN[i] = 0x00;
-                }
+                screen_cond = 0x02;
             }
 
             else if((opcode & 0x00FF) == 0x00EE){	//0X00EE returns from subroutine
@@ -240,14 +239,14 @@ void Chip8_CPU::decode() {
 
 
         case 0xD000:
-            //draw_to_screen();
+            screen_cond = 0x01;
             break;
 
 
 
 
         case 0xE000:
-            // user input checking
+            E_group();
             break;
 
 
@@ -274,8 +273,7 @@ void Chip8_CPU::decode() {
 
 
 void Chip8_CPU::math_logic_group(){
-    u_char op_subType = (opcode & 0x000F) & 0xFF;
-    u_char prev_regX = REG[regX];
+    unsigned char prev_regX = REG[regX];    //used for borrow checking 
 
     switch (op_subType){
 
@@ -285,10 +283,12 @@ void Chip8_CPU::math_logic_group(){
 
 
 
+
         case 0x01:  // assigns regx to value of regy OR regx
             REG[regX] |= REG[regY];
             break;
 
+            
 
         
         case 0x02:  // assigns regx to value of regy AND regx
@@ -297,9 +297,11 @@ void Chip8_CPU::math_logic_group(){
 
 
 
+
         case 0x03:  // assigns regx to value of regy XOR regx
             REG[regX] ^= REG[regY];
             break;
+
 
 
         
@@ -315,6 +317,7 @@ void Chip8_CPU::math_logic_group(){
 
 
 
+
         case 0x05:  // subtracts regY to regX with borrow flag
             prev_regX = REG[regX];
             REG[regX] -= REG[regY];
@@ -327,10 +330,12 @@ void Chip8_CPU::math_logic_group(){
 
 
 
+
         case 0x06:
             REG[0xF] = (REG[regX] & 1); // stores the smallest bit in register F
             REG[regX] >>= 1;            // then shifts regx right 1
             break;
+
 
 
 
@@ -343,6 +348,7 @@ void Chip8_CPU::math_logic_group(){
                 REG[0xF] = 0;
             }
             break;
+
 
 
         
@@ -362,51 +368,136 @@ void Chip8_CPU::math_logic_group(){
 //////////////////////////////////////////////////////////////////
 
 
-void draw_to_screen(){
+void Chip8_CPU::E_group(){
+    switch (cond_value) {
 
+        case 0x9E:                  // if the curent input key is equal
+            if(key == REG[regX]){   // to the value in regX then 
+                PC += 2;            // the next instrucion is skipped
+            }
+            break;
+
+        
+
+        case 0xA1:  // same as 9E but not equal to
+            if(key != REG[regX]){
+                PC += 2;
+            }
+            break;
+
+
+        
+        case 0x07:  // assigns regX to the value of DELAY_TIMER
+            REG[regX] = DELAY_TIMER;
+            break;
+
+
+
+        default: break;
+    }
 }
 
 
 ////////////////////////////////////////////////////////////////////
 
-
-void E_group();
+    
 void Chip8_CPU::F_group(){
-    u_char op_subType = (opcode & 0x00FF) & 0xFF;
-
-    switch (op_subType){
+    switch (cond_value){
 
     
         case 0x07:  // 0xFX07 assigns register x to the value of the delay timer
             REG[regX] = DELAY_TIMER;
             break;
 
+
+
+
         case 0x0A:
             //waits for key input
             break;
+
+
+
             
-        case 0x15:
+        case 0x15:  // sets delay to value in regX
             DELAY_TIMER = REG[regX];
 
-        case 0x18:
+
+
+
+        case 0x18:  // sets sound to value in regX
             SOUND_TIMER = REG[regX];
             break;
 
-        case 0x1E:
+
+
+
+        case 0x1E: // increments I by the value of regX
             I += REG[regX];
             break;
 
-        case 0x29:
-            //something silly
+
+
+
+        case 0x29: // point I to the character fontset coresponding to the character in regX
+            switch (REG[regX]) {
+                case 0x00:  I = 80; break;  // 0
+                case 0x01:  I = 85; break;  // 1
+                case 0x02:  I = 90; break;  // 2
+                case 0x03:  I = 95; break;  // 3
+                case 0x04:  I = 100; break; // 4
+                case 0x05:  I = 105; break; // 5
+                case 0x06:  I = 110; break; // 6
+                case 0x07:  I = 115; break; // 7
+                case 0x08:  I = 120; break; // 8
+                case 0x09:  I = 125; break; // 9
+                case 0x0A:  I = 130; break; // A
+                case 0x0B:  I = 135; break; // B
+                case 0x0C:  I = 140; break; // C
+                case 0x0D:  I = 145; break; // D
+                case 0x0E:  I = 150; break; // E
+                case 0x0F:  I = 155; break; // F
+
+                default: break;
+            }
             break;
+
+
+
 
         case 0x33:
         break; 
-
-        default:
-            break;
+        default: break;
     }
 }
 
 
-////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+
+void Chip8_CPU::draw_to_screen(){ // processes data in the instrucion to be easily used by the ui
+
+    x_pos = REG[regX];  // stores x position
+    y_pos = REG[regY];  // stores y position
+                        
+    
+    // generates a sprite out of a list of strings
+    // layout: "00111100", "11100001", etc.
+    // 0 indicates to leave pixel blank
+    // 1 indicates to draw pixel
+    // each string is a row
+    for(int i = 0; i < op_subType; i++){    
+        sprite.push_back("");               
+
+        for(int i = 0; i < 8; i++){
+            unsigned char nbit = RAM[I] & (1 << i);
+
+            if(nbit){
+                sprite[i].append("1");
+            }
+            else{
+                sprite[i].append("0");
+            }
+        }
+    }
+}
