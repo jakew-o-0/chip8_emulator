@@ -4,7 +4,6 @@
 #include<fstream>
 #include<iostream>
 #include<sys/types.h>
-#include<vector>
 #include<string>
 
 
@@ -27,6 +26,7 @@ private:
     ================================*/
 
 
+    // internal variables used accross functions
     uint16_t opcode;        // holds curent instruction to be decoded
     unsigned char regX;
     unsigned char regY;
@@ -34,18 +34,15 @@ private:
     unsigned char op_subType;
 
 public:
-    unsigned char key;
-    unsigned char screen_cond;  // 0x00 no changes, 0x01 draw to screen, 0x02 clear screen
-    unsigned char x_pos;
-    unsigned char y_pos;
-    std::vector<std::string> sprite;
+    unsigned char key;          // input key being pressed
 
 
 public:
     void initialise();
-    void load_game(std::string path);
+    void load_game(char* path);
     void fetch();
     void decode();
+    void debug();
 
 private:
     void math_logic_group();

@@ -54,29 +54,27 @@ void Chip8_CPU::initialise(){   // empties memory and loads the fontset into ram
         REG[i] = 0;
         STACK[i] = 0;
     }
-
-    
-    screen_cond = 0x02;
 }
 
 
 ///////////////////////////////////////////////////////////
 
 
-void Chip8_CPU::load_game(std::string path){    // reads binary file, loads it into ram to be executed
+void Chip8_CPU::load_game(char* path){    // reads binary file, loads it into ram to be executed
     std::ifstream file;
-    file.open(path, std::ios::binary | std::ios::in);
+    file.open("test_opcode.ch8", std::ios::binary | std::ios::in);
 
     
     if (~(file.is_open())) {    //cant open file
 
         std::cout << "couldnt open file\n";
+        std::cin.get();
 
     }
 
     // reads game rom and writes it to RAM
     
-    file.seekg(1, std::ios::end);   // find the size of rom file
+    file.seekg(1, std::ios::end);   // find the size of rom 
     int size = file.tellg();
     file.seekg(0, std::ios::beg);
 
@@ -120,19 +118,19 @@ void Chip8_CPU::fetch() {
 // layed out in two bytes, each nibble is, possibly a diffrent part of an instruction
 // the first nibble indicates what type of instruction it is
 void Chip8_CPU::decode() {
-    uint16_t op_type = opcode & 0xF000;             // isolates most significant nibble, indicates instrucion type
-    regX = ((opcode & 0x0F00) >> (2 * 8)) & 0xFF;   // isolates third nibble, often used to point to a register
-    regY = ((opcode & 0x00F0) >> 8) & 0xFF;         // isolates second nibble, often used to point to a register 
-    cond_value = (opcode & 0x00FF) & 0xFF;          // isolates the two least significant nibbles, often used as a condition or a value
-    op_subType = (opcode & 0x000F) & 0xFF;    // last nibble
 
-    screen_cond = 0x00;
+    uint16_t op_type = opcode & 0xF000;             // isolates most significant nibble, indicates instrucion type
+    regX = (opcode & 0x0F00) >>  8;   // isolates third nibble, often used to point to a register
+    regY = (opcode & 0x00F0) >> 4;         // isolates second nibble, often used to point to a register 
+    cond_value = opcode & 0x00FF;          // isolates the two least significant nibbles, often used as a condition or a value
+    op_subType = opcode & 0x000F;    // last nibble
+
+
 
     switch (op_type){
         case 0x0000:
 	    
             if((opcode & 0x00f0) == 0x00E0){	// 0x00E0 clears screen
-                screen_cond = 0x02;
             }
 
             else if((opcode & 0x00FF) == 0x00EE){	//0X00EE returns from subroutine
@@ -239,7 +237,7 @@ void Chip8_CPU::decode() {
 
 
         case 0xD000:
-            screen_cond = 0x01;
+            draw_to_screen();
             break;
 
 
@@ -477,27 +475,35 @@ void Chip8_CPU::F_group(){
 
 void Chip8_CPU::draw_to_screen(){ // processes data in the instrucion to be easily used by the ui
 
-    x_pos = REG[regX];  // stores x position
-    y_pos = REG[regY];  // stores y position
-                        
-    
-    // generates a sprite out of a list of strings
-    // layout: "00111100", "11100001", etc.
-    // 0 indicates to leave pixel blank
-    // 1 indicates to draw pixel
-    // each string is a row
-    for(int i = 0; i < op_subType; i++){    
-        sprite.push_back("");               
+}
 
-        for(int i = 0; i < 8; i++){
-            unsigned char nbit = RAM[I] & (1 << i);
 
-            if(nbit){
-                sprite[i].append("1");
-            }
-            else{
-                sprite[i].append("0");
-            }
-        }
-    }
+
+///////////////////////////////////////////////////////////
+//===================== debugging ======================//
+/////////////////////////////////////////////////////////
+
+void Chip8_CPU::debug(){
+
+    for(int i = 0; i < 16; i++){
+        std::cout << "register " << i << ": " << std::hex << REG[i] << "\n";
+ 
+   }
+   
+
+   std::cout << "\n\nstack:\n";
+
+
+    for(int i = 0; i < 16; i++){
+        std::cout << i << ": " << std::hex << STACK[i] << "\n";
+ 
+   }
+
+   std::cout << "stack pointer: " << std::hex << SP << "\nI register: " << std::hex << I << "\nprogram counter: " << PC << "\n\n";
+   std::cout << "delay timer: " << std::hex << DELAY_TIMER << " sound timer: " << SOUND_TIMER << "\n\n";
+
+   std::cout << "\nopcode: " << std::hex << opcode << "\nregX: " << std::hex << regX << "\nregY: " << std::hex << regY << "\ncond_value: " << cond_value << "\nop_subtype" << std::hex << op_subType << "\n\n";
+
+
+   std::cin.get();
 }
