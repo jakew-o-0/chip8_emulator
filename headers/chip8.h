@@ -39,7 +39,7 @@ public:
 
 public:
     void initialise();
-    void load_game(char* path);
+    void load_game(std::string path);
     void fetch();
     void decode();
     void debug();
