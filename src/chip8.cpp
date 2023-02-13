@@ -170,8 +170,8 @@ void Chip8_CPU::fetch()
 // layed out in two bytes, each nibble is, possibly a diffrent part of an instruction
 // the first nibble indicates what type of instruction it is
 //
-void Chip8_CPU::decode() {
-
+void Chip8_CPU::decode() 
+{
       uint16_t op_type = opcode & 0xF000;      // isolates most significant nibble, indicates instrucion type
       regX = (opcode & 0x0F00) >>  8;          // isolates third nibble, often used to point to a register
       regY = (opcode & 0x00F0) >> 4;           // isolates second nibble, often used to point to a register 
@@ -184,6 +184,7 @@ void Chip8_CPU::decode() {
             case 0x0000:
             {
                   if((opcode & 0x00f0) == 0x00E0){	// 0x00E0 clears screen
+                        screen_cond_flag = 0x0;
                   }
 
                   else if((opcode & 0x00FF) == 0x00EE){	//0X00EE returns from subroutine
@@ -358,7 +359,8 @@ void Chip8_CPU::math_logic_group()
 {
       unsigned char prev_regX = REG[regX];    //used for borrow checking 
 
-      switch (op_subType){
+      switch (op_subType)
+      {
 
             case 0x00:  // assigns regX to value of regY
             {
@@ -418,7 +420,8 @@ void Chip8_CPU::math_logic_group()
                   REG[regX] -= REG[regY];
                   REG[0xF] = 1;
 
-                  if (prev_regX < REG[regX]) {    // if the previous value is smaller than the current,
+                  if (prev_regX < REG[regX]) 
+                  {                                 // if the previous value is smaller than the current,
                         REG[0xF] = 0;               // the integer has wrapped and a borrow has taken place
                   }
                   break;
@@ -428,35 +431,42 @@ void Chip8_CPU::math_logic_group()
 
 
             case 0x06:
+            {
                   REG[0xF] = (REG[regX] & 1); // stores the smallest bit in register F
                   REG[regX] >>= 1;            // then shifts regx right 1
                   break;
-
-
-
-
-        case 0x07:  // sets register x to register y - x, with borrow flag
-            prev_regX = REG[regX];
-            REG[regX] = REG[regY] - REG[regX];
-            REG[0xF] = 1;
-
-            if (prev_regX < REG[regX]) {
-                REG[0xF] = 0;
             }
-            break;
+
+
+
+
+            case 0x07:  // sets register x to register y - x, with borrow flag
+            {
+                  prev_regX = REG[regX];
+                  REG[regX] = REG[regY] - REG[regX];
+                  REG[0xF] = 1;
+
+                  if (prev_regX < REG[regX]) 
+                  {
+                        REG[0xF] = 0;
+                  }
+                  break;
+            }
 
 
 
         
-        case 0x0E:
-            REG[0xF] = (REG[regX] & (1 << 8));  // stores the largest bit in register F
-            REG[regX] <<= 1;                    // then shifts regx left 1
-            break;
+            case 0x0E:
+            {
+                  REG[0xF] = (REG[regX] & (1 << 8));  // stores the largest bit in register F
+                  REG[regX] <<= 1;                    // then shifts regx left 1
+                  break;
+            }
 
 
 
-        default:
-            break;
+            default:
+                  break;
       }
 }
 
@@ -464,115 +474,173 @@ void Chip8_CPU::math_logic_group()
 //////////////////////////////////////////////////////////////////
 
 
-void Chip8_CPU::E_group(){
-    switch (cond_value) {
+void Chip8_CPU::E_group()
+{
+      switch (cond_value) 
+      {
 
-        case 0x9E:                  // if the curent input key is equal
-            if(key == REG[regX]){   // to the value in regX then 
-                PC += 2;            // the next instrucion is skipped
+            case 0x9E:                        // if the curent input key is equal
+            {
+                  if(key == REG[regX])
+                  {                           // to the value in regX then 
+                        PC += 2;              // the next instrucion is skipped
+                  }
+                  break;
             }
-            break;
 
         
 
-        case 0xA1:  // same as 9E but not equal to
-            if(key != REG[regX]){
-                PC += 2;
+            case 0xA1:  // same as 9E but not equal to
+            {
+                  if(key != REG[regX])
+                  {
+                       PC += 2;
+                  }
+                  break;
             }
-            break;
 
 
         
-        case 0x07:  // assigns regX to the value of DELAY_TIMER
-            REG[regX] = DELAY_TIMER;
-            break;
+            case 0x07:  // assigns regX to the value of DELAY_TIMER
+            {
+                  REG[regX] = DELAY_TIMER;
+                  break;
+            }
 
 
 
-        default: break;
-    }
+            default: break;
+      }
 }
 
 
 ////////////////////////////////////////////////////////////////////
 
     
-void Chip8_CPU::F_group(){
-    switch (cond_value){
+void Chip8_CPU::F_group()
+{
+      switch (cond_value)
+      {
 
     
-        case 0x07:  // 0xFX07 assigns register x to the value of the delay timer
-            REG[regX] = DELAY_TIMER;
-            break;
+            case 0x07:  // 0xFX07 assigns register x to the value of the delay timer
+            {
+                  REG[regX] = DELAY_TIMER;
+                  break;
+            }
 
 
 
 
-        case 0x0A:
-            //waits for key input
-            break;
+            case 0x0A:
+            {
+                  //waits for key input
+                  break;
+            }
 
 
 
             
-        case 0x15:  // sets delay to value in regX
-            DELAY_TIMER = REG[regX];
-
-
-
-
-        case 0x18:  // sets sound to value in regX
-            SOUND_TIMER = REG[regX];
-            break;
-
-
-
-
-        case 0x1E: // increments I by the value of regX
-            I += REG[regX];
-            break;
-
-
-
-
-        case 0x29: // point I to the character fontset coresponding to the character in regX
-            switch (REG[regX]) {
-                case 0x00:  I = 80; break;  // 0
-                case 0x01:  I = 85; break;  // 1
-                case 0x02:  I = 90; break;  // 2
-                case 0x03:  I = 95; break;  // 3
-                case 0x04:  I = 100; break; // 4
-                case 0x05:  I = 105; break; // 5
-                case 0x06:  I = 110; break; // 6
-                case 0x07:  I = 115; break; // 7
-                case 0x08:  I = 120; break; // 8
-                case 0x09:  I = 125; break; // 9
-                case 0x0A:  I = 130; break; // A
-                case 0x0B:  I = 135; break; // B
-                case 0x0C:  I = 140; break; // C
-                case 0x0D:  I = 145; break; // D
-                case 0x0E:  I = 150; break; // E
-                case 0x0F:  I = 155; break; // F
-
-                default: break;
+            case 0x15:  // sets delay to value in regX
+            {
+                  DELAY_TIMER = REG[regX];
             }
-            break;
 
 
 
 
-        case 0x33:
-        break; 
-        default: break;
-    }
+            case 0x18:  // sets sound to value in regX
+            {
+                  SOUND_TIMER = REG[regX];
+                  break;
+            }
+
+
+
+
+            case 0x1E: // increments I by the value of regX
+            {
+                  I += REG[regX];
+                  break;
+            }
+
+
+
+
+            case 0x29: // point I to the character fontset coresponding to the character in regX
+                  switch (REG[regX]) 
+                  {
+                        case 0x00:  I = 80; break;  // 0
+                        case 0x01:  I = 85; break;  // 1
+                        case 0x02:  I = 90; break;  // 2
+                        case 0x03:  I = 95; break;  // 3
+                        case 0x04:  I = 100; break; // 4
+                        case 0x05:  I = 105; break; // 5
+                        case 0x06:  I = 110; break; // 6
+                        case 0x07:  I = 115; break; // 7
+                        case 0x08:  I = 120; break; // 8
+                        case 0x09:  I = 125; break; // 9
+                        case 0x0A:  I = 130; break; // A
+                        case 0x0B:  I = 135; break; // B
+                        case 0x0C:  I = 140; break; // C
+                        case 0x0D:  I = 145; break; // D
+                        case 0x0E:  I = 150; break; // E
+                        case 0x0F:  I = 155; break; // F
+
+                        default: break;
+                  }
+                  break;
+
+
+
+
+              case 0x33:
+                    break; 
+                    default: break;
+      }
 }
 
 
 ///////////////////////////////////////////////////////////////////////
 
 
-void Chip8_CPU::draw_to_screen(){ // processes data in the instrucion to be easily used by the ui
+void Chip8_CPU::draw_to_screen()
+{                                     // processes data in the instrucion to be easily used by the ui
+      screen_cond_flag = 0xF;
 
+
+      for(int i = 0; i < (int)cond_value; i++)
+      {
+            int pos_y = i + REG[regX];
+            if( pos_y > 32)
+            {
+                  break;
+            }
+            
+
+            for(int j = 0; j < 8; j++)
+            {
+                  int pos_x = j + REG[regX];
+                  if(pos_x > 64)
+                  {
+                        break;
+                  }
+
+                  unsigned char bit = RAM[I + j] & (1 >> j);
+                  
+                  //if any 'on' bits are going to be turned 'off'
+                  //the flag register is set to one, else it is set to 0
+                  if(bit == 1 && SCREEN[pos_x * pos_x] > 0)
+                  {
+                        REG[0xF] = 1;
+                  }
+                  REG[0xF] = 0;
+
+                  //sets the current pixel on the abstract screen to 
+                  //the j'Th position in the current row of the sprite
+                  SCREEN[pos_x * pos_y] = bit;
+            }
+      }
 }
 
 

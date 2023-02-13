@@ -35,6 +35,8 @@ private:
 
 public:
     unsigned char key;          // input key being pressed
+    unsigned char SCREEN[64*32];
+    unsigned char screen_cond_flag; // F -> draw screen, 0 -> clear screen
 
 
 public:
