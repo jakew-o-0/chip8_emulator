@@ -1,6 +1,7 @@
 #include "/home/jake/code/c_cpp/chip8_emulator/headers/chip8.h"
 #include <SDL2/SDL_rect.h>
 #include <algorithm>
+#include <cstdio>
 #include <vector>
 
 #include <SDL2/SDL.h>
@@ -17,9 +18,7 @@
 
 int main(int argc, char** argv)
 {
-      Chip8_CPU chip8;
-      chip8.initialise();
-      chip8.load_game("/home/jake/code/c_cpp/chip8_emulator/resorces/test_opcode.ch8");
+      Chip8_CPU chip8; chip8.initialise(); chip8.load_game("/home/jake/code/c_cpp/chip8_emulator/resorces/Sierpinski [Sergey Naydenov, 2010].ch8");
 
 
 
@@ -95,31 +94,31 @@ int main(int argc, char** argv)
 
             if(chip8.screen_cond_flag == 0xF)
             {
-                  int pos_x = 0;
-                  int pos_y = 0;
+                  chip8.screen_cond_flag = 0x1;
                   std::vector<SDL_Rect> pixels;
 
-                  for(int i = 0; i < 64*32; i++)
+                  for(int i = 0; i < 32; i++)
                   {
-                        if(i % 64 == 0)
+                        printf("\n");
+
+                        for(int j = 0; j < 64; j++)
                         {
-                              pos_y++;
-                              pos_x = 0;
+                              if(chip8.SCREEN[i][j] == 1)
+                              {
+                                    SDL_Rect tmp;
+                                    tmp.h = 10;
+                                    tmp.w = 10;
+                                    tmp.x = j*10+10;
+                                    tmp.y = i*10+10;
+
+                                    pixels.push_back(tmp);
+                              }
+
+                              printf("%d", chip8.SCREEN[i][j]);
+
                         }
-
-                        if(chip8.SCREEN[i] == 0x1)
-                        {
-                              SDL_Rect tmp;
-                              tmp.h = 10;
-                              tmp.w = 10;
-                              tmp.x = pos_x;
-                              tmp.y = pos_y;
-
-                              pixels.push_back(tmp);
-                        }
-
-                        pos_x++;
                   }
+                  printf("\n");
 
                   SDL_Rect pixel_arr[pixels.size()];
                   std::copy(pixels.begin(), pixels.end(), pixel_arr);
@@ -131,11 +130,13 @@ int main(int argc, char** argv)
             }
             else if(chip8.screen_cond_flag == 0x0)
             {
+                  chip8.screen_cond_flag = 0x1;
                   SDL_RenderClear(window_renderer);
             }
+            SDL_RenderPresent(window_renderer);
 
 
-            chip8.debug();
+            //chip8.debug();
       }
 }
 

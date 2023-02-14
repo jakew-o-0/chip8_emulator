@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstdlib>
 #include<fstream>
 #include<iostream>
 #include<sys/types.h>
@@ -60,6 +62,14 @@ void Chip8_CPU::initialise(){
         REG[i] = 0;
         STACK[i] = 0;
     }
+
+    for(int i = 0; i < 32; i++)
+    {
+          for(int j = 0; j < 64; j++)
+          {
+                  SCREEN[i][j] = 0x0;
+          }
+    }
 }
 
 
@@ -83,13 +93,13 @@ void Chip8_CPU::initialise(){
 void Chip8_CPU::load_game(std::string path)
 {
     std::ifstream file;
-    file.open(path, std::ios::binary | std::ios::in);
+    file.open(path.c_str(), std::ios::binary | std::ios::in);
 
     
-    if (~(file.is_open())) {    //cant open file
+    if (!file.is_open()) {    //cant open file
 
         std::cout << "couldnt open file\n";
-        std::cin.get();
+        exit(-1);
 
     }
 
@@ -110,7 +120,6 @@ void Chip8_CPU::load_game(std::string path)
     
     for (int i = 0; i < size; i++) {    // write the buffer into the program portion of RAM
         RAM[i + 512] = buffer[i];
-        std::cout << "\n" << RAM[i + 512];
     }
 }
 
@@ -145,7 +154,8 @@ void Chip8_CPU::fetch()
       if(DELAY_TIMER > 0)
       {
             DELAY_TIMER--;
-      {
+      }
+      
       if(SOUND_TIMER > 0)
       {
             SOUND_TIMER--;
@@ -185,6 +195,14 @@ void Chip8_CPU::decode()
             {
                   if((opcode & 0x00f0) == 0x00E0){	// 0x00E0 clears screen
                         screen_cond_flag = 0x0;
+
+                        for(int i = 0; i < 32; i++)
+                        {
+                              for(int j = 0; j < 64; j++)
+                              {
+                                    SCREEN[i][j] = 0x0;
+                              }
+                        }
                   }
 
                   else if((opcode & 0x00FF) == 0x00EE){	//0X00EE returns from subroutine
@@ -607,38 +625,30 @@ void Chip8_CPU::F_group()
 void Chip8_CPU::draw_to_screen()
 {                                     // processes data in the instrucion to be easily used by the ui
       screen_cond_flag = 0xF;
+      int height = op_subType;
 
-
-      for(int i = 0; i < (int)cond_value; i++)
+      for(int i = 0; i < height; i++)
       {
-            int pos_y = i + REG[regX];
-            if( pos_y > 32)
-            {
-                  break;
-            }
-            
+            int y_offset = 0;
 
-            for(int j = 0; j < 8; j++)
+            for(int j = 7; j >= 0; j--)
             {
-                  int pos_x = j + REG[regX];
-                  if(pos_x > 64)
-                  {
-                        break;
-                  }
-
-                  unsigned char bit = RAM[I + j] & (1 >> j);
+                  // masks the j'th bit from the location in memory
+                  // that I points to and shifts it to the least
+                  // significant bit
+                  unsigned char bit = (RAM[I + i] & (1 << j)) >> j;
+                  SCREEN[REG[regY] + i][REG[regX] + y_offset] ^= bit;       
                   
-                  //if any 'on' bits are going to be turned 'off'
-                  //the flag register is set to one, else it is set to 0
-                  if(bit == 1 && SCREEN[pos_x * pos_x] > 0)
+                  if(SCREEN[REG[regY] + i][REG[regX] + y_offset] == 0)
                   {
                         REG[0xF] = 1;
                   }
-                  REG[0xF] = 0;
+                  else
+                  {
+                        REG[0xF] = 0;
+                  }
 
-                  //sets the current pixel on the abstract screen to 
-                  //the j'Th position in the current row of the sprite
-                  SCREEN[pos_x * pos_y] = bit;
+                  y_offset++;
             }
       }
 }
@@ -652,7 +662,7 @@ void Chip8_CPU::draw_to_screen()
 void Chip8_CPU::debug(){
 
     for(int i = 0; i < 16; i++){
-        std::cout << "register " << i << ": " << std::hex << REG[i] << "\n";
+        printf("Register %d: %x\n", i, REG[i]);
  
    }
    
@@ -661,14 +671,23 @@ void Chip8_CPU::debug(){
 
 
     for(int i = 0; i < 16; i++){
-        std::cout << i << ": " << std::hex << STACK[i] << "\n";
- 
+        printf("%d: %x\n", i, STACK[i]);
    }
 
-   std::cout << "stack pointer: " << std::hex << SP << "\nI register: " << std::hex << I << "\nprogram counter: " << PC << "\n\n";
-   std::cout << "delay timer: " << std::hex << DELAY_TIMER << " sound timer: " << SOUND_TIMER << "\n\n";
+   printf("\nstack pointer: %x\n", SP);
+   printf("I register: %x\n", I);
+   printf("program counter: %d, %x\n", PC, PC);
 
-   std::cout << "\nopcode: " << std::hex << opcode << "\nregX: " << std::hex << regX << "\nregY: " << std::hex << regY << "\ncond_value: " << cond_value << "\nop_subtype" << std::hex << op_subType << "\n\n";
+   printf("delay timer: %d\n", DELAY_TIMER);
+   printf("sound timer: %d\n", SOUND_TIMER);
+
+   printf("\nopcode: %x:", opcode);
+   printf("\nregX: %x", regX);
+   printf("\nregY: %x", regY);
+   printf("\ncond_value: %x", cond_value);
+   printf("\nop_subtype: %x", op_subType);
+   printf("\n\n\n");
+   printf("desplayed bit: %x", RAM[I]);
 
 
    std::cin.get();
