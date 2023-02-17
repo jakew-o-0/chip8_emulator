@@ -5,6 +5,7 @@
 #include<sys/types.h>
 #include<vector>
 #include<string>
+#include <unistd.h>
 
 #include "/home/jake/code/c_cpp/chip8_emulator/headers/chip8.h"
 
@@ -193,7 +194,7 @@ void Chip8_CPU::decode()
       switch (op_type){
             case 0x0000:
             {
-                  if((opcode & 0x00f0) == 0x00E0){	// 0x00E0 clears screen
+                  if(cond_value == 0xE0){	// 0x00E0 clears screen
                         screen_cond_flag = 0x0;
 
                         for(int i = 0; i < 32; i++)
@@ -205,7 +206,7 @@ void Chip8_CPU::decode()
                         }
                   }
 
-                  else if((opcode & 0x00FF) == 0x00EE){	//0X00EE returns from subroutine
+                  else if(cond_value == 0xEE){	//0X00EE returns from subroutine
                         SP--;					      //decrement stack pointer
                         PC = STACK[SP];				//pc asigned to the retrun location
                         STACK[SP] = 0x0000;			//unused stack position is cleared
@@ -392,6 +393,7 @@ void Chip8_CPU::math_logic_group()
             case 0x01:  // assigns regx to value of regy OR regx
             {
                   REG[regX] |= REG[regY];
+                  REG[0xF] = 0;
                   break;
             }
 
@@ -401,6 +403,7 @@ void Chip8_CPU::math_logic_group()
             case 0x02:  // assigns regx to value of regy AND regx
             {
                   REG[regX] &= REG[regY];
+                  REG[0xF] = 0;
                   break;
             }
 
@@ -410,6 +413,7 @@ void Chip8_CPU::math_logic_group()
             case 0x03:  // assigns regx to value of regy XOR regx
             {
                   REG[regX] ^= REG[regY];
+                  REG[0xF] = 0;
                   break;
             }
 
@@ -450,8 +454,10 @@ void Chip8_CPU::math_logic_group()
 
             case 0x06:
             {
-                  REG[0xF] = (REG[regX] & 1); // stores the smallest bit in register F
+                  REG[regX] = REG[regY];
+                  unsigned char small_bit = (REG[regX] & 0x01); // stores the smallest bit in register F
                   REG[regX] >>= 1;            // then shifts regx right 1
+                  REG[0xF] = small_bit;
                   break;
             }
 
@@ -462,11 +468,11 @@ void Chip8_CPU::math_logic_group()
             {
                   prev_regX = REG[regX];
                   REG[regX] = REG[regY] - REG[regX];
-                  REG[0xF] = 1;
+                  REG[0xF] = 0;
 
                   if (prev_regX < REG[regX]) 
                   {
-                        REG[0xF] = 0;
+                        REG[0xF] = 1;
                   }
                   break;
             }
@@ -476,8 +482,10 @@ void Chip8_CPU::math_logic_group()
         
             case 0x0E:
             {
-                  REG[0xF] = (REG[regX] & (1 << 8));  // stores the largest bit in register F
+                  REG[regX] = REG[regY];
+                  unsigned char significant_bit = (REG[regX] & (1 << 7)) >> 7;  // stores the largest bit in register F
                   REG[regX] <<= 1;                    // then shifts regx left 1
+                  REG[0xF] = significant_bit;
                   break;
             }
 
@@ -550,9 +558,12 @@ void Chip8_CPU::F_group()
 
 
 
-            case 0x0A:
+            case 0x0A:  //waits for key input
             {
-                  //waits for key input
+                  if(key != REG[regX])
+                  {
+                        PC -= 2;
+                  }
                   break;
             }
 
@@ -613,8 +624,33 @@ void Chip8_CPU::F_group()
 
 
               case 0x33:
+                        // BCI CONVERSION
                     break; 
-                    default: break;
+
+              case 0x55:
+              {
+                    
+                    for(int i = 0; i <= regX; i++)
+                    {
+                          RAM[I + i] = REG[i];
+                    }
+                    break;
+              }
+
+
+              case 0x65:
+              {
+                    
+                    for(int i = 0; i <= regX; i++)
+                    {
+                          REG[i] = RAM[I + i];
+                    }
+                    break;
+              }
+
+
+
+              default: break;
       }
 }
 
@@ -626,6 +662,16 @@ void Chip8_CPU::draw_to_screen()
 {                                     // processes data in the instrucion to be easily used by the ui
       screen_cond_flag = 0xF;
       int height = op_subType;
+      int pos_x = REG[regX];
+      int pos_y = REG[regY];
+
+      //if(REG[regX] > 64 || REG[regY] > 32)
+      //{
+            //pos_x = REG[regX] % 32;
+            //pos_y = REG[regY] % 64;
+      //}
+
+
 
       for(int i = 0; i < height; i++)
       {
@@ -633,13 +679,19 @@ void Chip8_CPU::draw_to_screen()
 
             for(int j = 7; j >= 0; j--)
             {
+                  if(pos_y + i > 32 || pos_x + y_offset > 64)
+                  {
+                       break; 
+                  }
+
+
                   // masks the j'th bit from the location in memory
                   // that I points to and shifts it to the least
                   // significant bit
                   unsigned char bit = (RAM[I + i] & (1 << j)) >> j;
-                  SCREEN[REG[regY] + i][REG[regX] + y_offset] ^= bit;       
+                  SCREEN[pos_y + i][pos_x + y_offset] ^= bit;       
                   
-                  if(SCREEN[REG[regY] + i][REG[regX] + y_offset] == 0)
+                  if(SCREEN[pos_y + i][pos_x + y_offset] == 0)
                   {
                         REG[0xF] = 1;
                   }
